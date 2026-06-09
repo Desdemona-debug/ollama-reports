@@ -39,14 +39,6 @@ ideas.txt (notas rápidas del operador)
 - [Ollama](https://ollama.com) con el modelo `qwen2.5:7b` descargado
 - Reportes anteriores en formato `.pdf` o `.md`
 
-### Instalación de dependencias
-
-```powershell
-pip install sentence-transformers chromadb ollama pypdf python-docx pyyaml rich
-```
-
----
-
 ## Estructura del proyecto
 
 ```
@@ -76,7 +68,7 @@ report-writer/
 ### `rag/ingester.py`
 Lee todos los archivos `.pdf` y `.md` de `reports_source/`, los divide en fragmentos de texto y los indexa como vectores en ChromaDB.
 
-Solo necesitas ejecutarlo una vez, o cada vez que agregues nuevos reportes a `reports_source/`.
+Solo se ejecuta una vez, o cada vez que se agreguen nuevos reportes a `reports_source/`.
 
 Usa el modelo de embeddings `paraphrase-multilingual-MiniLM-L12-v2`, que funciona con texto en español e inglés sin necesidad de API externa.
 
@@ -140,80 +132,10 @@ Plantilla estándar para un hallazgo individual. Incluye todos los campos del re
 Plantilla para el resumen ejecutivo del engagement completo. Incluye tabla de hallazgos por severidad, resumen general y recomendaciones prioritarias.
 
 ---
-
-## Uso
-
-### 1. Agregar reportes anteriores
-
-Copia tus reportes previos en PDF o Markdown a la carpeta `reports_source/`:
-
-```
-reports_source/
-├── pentest_empresa_a_2024.pdf
-├── redteam_cliente_b_2023.pdf
-└── auditoria_web_2024.md
-```
-
-### 2. Indexar los reportes (una sola vez)
-
-```powershell
-python main.py ingest
-```
-
-Salida esperada:
-```
-[+] Procesando: pentest_empresa_a_2024.pdf
-    → 42 fragmentos indexados
-[+] Procesando: redteam_cliente_b_2023.pdf
-    → 38 fragmentos indexados
-[✓] Ingestión completa. Fragmentos en DB: 80
-```
-
-### 3. Escribir las ideas del hallazgo
-
-Edita `input/ideas.txt` con notas crudas del operador:
-
-```
-Se encontró panel administrativo accesible desde internet.
-No requiere MFA para autenticarse.
-Autenticación solo por usuario y contraseña.
-Contraseñas débiles aceptadas (probado: admin/admin).
-Riesgo de acceso no autorizado a funciones críticas del sistema.
-```
-
-### 4. Generar el hallazgo
-
-```powershell
-# Desde archivo, guardando el resultado
-python main.py generate --file input/ideas.txt --output resultados/hallazgo_001.md
-
-# Ideas directas desde terminal
-python main.py generate --ideas "Inyección SQL en parámetro id. Datos extraídos de tabla usuarios."
-
-# Sin RAG (para comparar calidad con y sin contexto histórico)
-python main.py generate --file input/ideas.txt --no-rag
-
-# Controlar cuántos fragmentos RAG se usan
-python main.py generate --file input/ideas.txt --top-k 3
-```
-
----
-
-## Configuración de Ollama remoto
-
-Si Ollama corre en otro equipo de la red, edita esta línea en `writer/report_generator.py`:
-
-```python
-OLLAMA_HOST = "http://192.168.1.100:11434"
-```
-
----
-
 ## Notas importantes
 
 - Los reportes en `reports_source/` se usan **solo como referencia de estilo**. El sistema no copia texto literal de ellos.
-- La base de datos vectorial (`rag/chroma_db/`) persiste entre ejecuciones. Si agregas nuevos reportes, vuelve a ejecutar `ingest`.
-- El sistema no almacena ni transmite tus reportes a servicios externos. Todo corre localmente.
+- La base de datos vectorial (`rag/chroma_db/`) persiste entre ejecuciones. Si se agregan nuevos reportes, se vuelve a ejecutar `ingest`.
+- El sistema no almacena ni transmite reportes a servicios externos. Todo corre localmente.
 
 ---
-Con esto el proyecto está 100% documentado y listo para usar. ¿Hay algo que quieras ajustar del README o del proyecto en general?
