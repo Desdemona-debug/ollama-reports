@@ -2,16 +2,9 @@
 
 Generador inteligente de hallazgos y reportes de pentesting asistido por RAG (Retrieval-Augmented Generation).
 
-Convierte ideas rápidas del operador en hallazgos técnicos formales, usando tus reportes anteriores como memoria de estilo, estructura y criterios de severidad.
+Convierte ideas rápidas del operador en hallazgos técnicos formales, usando reportes anteriores como memoria de estilo, estructura y criterios de severidad.
 
 ---
-
-## ¿Para qué sirve?
-
-Durante un engagement de Red Team o Pentest, documentar hallazgos consume tiempo significativo. Este sistema resuelve dos problemas concretos:
-
-1. **Velocidad:** en lugar de redactar desde cero, el operador escribe ideas crudas y el sistema genera el hallazgo formal completo.
-2. **Consistencia:** todos los hallazgos siguen la misma estructura, tono y criterios de severidad, basados en tus reportes históricos.
 
 ### Flujo completo
 
@@ -32,12 +25,6 @@ ideas.txt (notas rápidas del operador)
 ```
 
 ---
-
-## Requisitos
-
-- Python 3.10+
-- [Ollama](https://ollama.com) con el modelo `qwen2.5:7b` descargado
-- Reportes anteriores en formato `.pdf` o `.md`
 
 ## Estructura del proyecto
 
