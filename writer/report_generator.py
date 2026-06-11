@@ -4,7 +4,7 @@ import ollama
 
 from rag.retriever import Retriever
 from writer.prompt_builder import build_prompt, build_prompt_no_rag
-
+from writer.validators import validate
 OLLAMA_MODEL = "qwen2.5:7b"
 OLLAMA_HOST = "http://localhost:11434"
 

@@ -6,6 +6,9 @@ from typing import List
 import chromadb
 from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
+from docx import Document as DocxDocument
+
+logger = logging.getLogger(__name__)
 
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
@@ -13,6 +16,8 @@ EMBED_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
 COLLECTION_NAME = "pentest_reports"
 DB_PATH = "./rag/chroma_db"
 
+MAX_FILE_COUNT      = 1000
+MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
 
 def _load_pdf(path: str) -> str:
     reader = PdfReader(path)
@@ -23,20 +28,18 @@ def _load_markdown(path: str) -> str:
     return Path(path).read_text(encoding="utf-8")
 
 
+
 def _load_docx(path: str) -> str:
     doc = DocxDocument(path)
     parts = []
-    for block in doc.element.body:
-        if block.tag.endswith("}p"):          # párrafo
-            text = block.text_content() if hasattr(block, "text_content") else ""
-            # forma más segura:
-            from docx.oxml.ns import qn
-            texts = [node.text for node in block.iter() if node.tag == qn("w:t")]
-            parts.append("".join(t for t in texts if t))
-        elif block.tag.endswith("}tbl"):      # tabla
-            from docx.oxml.ns import qn
-            texts = [node.text for node in block.iter() if node.tag == qn("w:t")]
-            parts.append(" | ".join(t for t in texts if t))
+    for para in doc.paragraphs:
+        if para.text.strip():
+            parts.append(para.text)
+    for table in doc.tables:
+        for row in table.rows:
+            cells = [cell.text for cell in row.cells if cell.text.strip()]
+            if cells:
+                parts.append(" | ".join(cells))
     return "\n".join(parts)
 
 
@@ -63,7 +66,7 @@ def _chunk_text(text: str) -> List[str]:
 
 
 def _doc_id(filepath: str, chunk_index: int) -> str:
-    base = hashlib.md5(filepath.encode()).hexdigest()[:8]
+    base = hashlib.sha256(filepath.encode()).hexdigest()
     return f"{base}_chunk{chunk_index}"
 
 
@@ -80,7 +83,7 @@ def ingest_reports(reports_dir: str = "./reports_source") -> None:
     files = (
         list(reports_path.glob("**/*.pdf")) +
         list(reports_path.glob("**/*.md")) +
-        list(reports_path.glob("**/*.markdown"))
+        list(reports_path.glob("**/*.markdown")) +
         list(reports_path.glob("**/*.docx"))
     )
 
@@ -88,7 +91,14 @@ def ingest_reports(reports_dir: str = "./reports_source") -> None:
         print(f"[!] No se encontraron reportes en '{reports_dir}'")
         return
 
+    if len(files) > MAX_FILE_COUNT:
+        raise ValueError(f"Demasiados archivos: {len(files)} (máximo {MAX_FILE_COUNT})")
+
     for filepath in files:
+        if filepath.stat().st_size > MAX_FILE_SIZE_BYTES:
+            logger.warning("Archivo omitido por tamaño excesivo: %s", filepath.name)
+            continue
+
         print(f"[+] Procesando: {filepath.name}")
         try:
             text = _load_document(str(filepath))
@@ -99,17 +109,18 @@ def ingest_reports(reports_dir: str = "./reports_source") -> None:
                 embeddings=model.encode(chunks).tolist(),
                 documents=chunks,
                 metadatas=[
-                    {"source": filepath.name, "chunk_index": i, "filepath": str(filepath)}
+                    {"source": filepath.name, "chunk_index": i, "filepath": filepath.name}
                     for i in range(len(chunks))
                 ]
             )
             print(f"    → {len(chunks)} fragmentos indexados")
 
-        except Exception as e:
-            print(f"[!] Error en {filepath.name}: {e}")
+        except Exception:
+            logger.exception("Error procesando %s", filepath.name)
 
     print(f"\n[✓] Ingestión completa. Fragmentos en DB: {collection.count()}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     ingest_reports()
