@@ -1,10 +1,14 @@
-from typing import Optional
+# writer/report_generator.py
+import logging
 
 import ollama
 
 from rag.retriever import Retriever
 from writer.prompt_builder import build_prompt, build_prompt_no_rag
 from writer.validators import validate
+
+logger = logging.getLogger(__name__)
+
 OLLAMA_MODEL = "qwen2.5:7b"
 OLLAMA_HOST = "http://localhost:11434"
 
@@ -42,12 +46,11 @@ class ReportGenerator:
 
         if sources:
             unique_sources = list(dict.fromkeys(sources))
-            result += f"\n\n---\n_Fuentes consultadas: {', '.join(unique_sources)}_"
+            logger.info("RAG sources consultadas: %s", ", ".join(unique_sources))
 
         validation = validate(result)
         if not validation.passed:
-            # Adjunta advertencias al output para que el operador las vea
-            result += f"\n\n---\n**Validación:**\n```\n{validation.summary()}\n```"
+            logger.warning("Validación fallida: %s", validation.summary())
 
         return result
 

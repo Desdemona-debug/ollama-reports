@@ -12,6 +12,11 @@ INJECTION_PATTERNS = [
     r"override (all |previous )?instructions",
 ]
 
+def _check_injection(text: str) -> None:
+    for pattern in INJECTION_PATTERNS:
+        if re.search(pattern, text, re.IGNORECASE):
+            raise ValueError("Input rechazado: patrón de inyección detectado.")
+
 SYSTEM_PROMPT = """Eres un asistente especializado en redacción de reportes de ciberseguridad ofensiva.
 Tu función es tomar ideas generales de un operador de Red Team/Pentest y convertirlas en hallazgos \
 formales y profesionales.
@@ -34,10 +39,6 @@ FINDING_TEMPLATE = """Genera un hallazgo formal con la siguiente estructura exac
 ## 6. Severidad (Crítica / Alta / Media / Baja / Informativa) con justificación breve
 ## 7. Versión ejecutiva (2-3 oraciones para audiencia no técnica)"""
 
-def _check_injection(text: str) -> None:
-    for pattern in INJECTION_PATTERNS:
-        if re.search(pattern, text, re.IGNORECASE):
-            raise ValueError("Input rechazado: patrón de inyección detectado.")
 
 def build_prompt(ideas: str, rag_context: str) -> Dict[str, str]:
     _check_injection(ideas)

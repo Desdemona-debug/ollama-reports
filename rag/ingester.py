@@ -2,11 +2,12 @@
 import hashlib
 from pathlib import Path
 from typing import List
-
+import logging
 import chromadb
 from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
 from docx import Document as DocxDocument
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
