@@ -14,7 +14,8 @@ MAX_INPUT_CHARS = 50_000
 
 def _validate_path(user_path: str, allowed_base: Path, label: str) -> Path:
     resolved = Path(user_path).resolve()
-    if not str(resolved).startswith(str(allowed_base.resolve())):
+    base = allowed_base.resolve()
+    if resolved != base and not resolved.is_relative_to(base):
         raise ValueError(f"{label} fuera del directorio permitido: {user_path}")
     return resolved
 

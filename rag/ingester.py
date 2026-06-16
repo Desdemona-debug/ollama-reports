@@ -78,7 +78,7 @@ def ingest_reports(reports_dir: str = "./reports_source") -> None:
         metadata={"hnsw:space": "cosine"}
     )
 
-    model = SentenceTransformer(EMBED_MODEL)
+    model = SentenceTransformer(EMBED_MODEL, local_files_only=True)
 
     reports_path = Path(reports_dir)
     files = (

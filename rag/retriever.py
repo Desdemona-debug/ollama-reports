@@ -14,7 +14,7 @@ class Retriever:
     def __init__(self):
         client = chromadb.PersistentClient(path=DB_PATH)
         self.collection = client.get_collection(name=COLLECTION_NAME)
-        self.model = SentenceTransformer(EMBED_MODEL)
+        self.model = SentenceTransformer(EMBED_MODEL, local_files_only=True)
 
     def search(self, query: str, top_k: int = TOP_K) -> List[Dict]:
         embedding = self.model.encode(query).tolist()
