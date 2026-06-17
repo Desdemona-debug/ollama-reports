@@ -8,6 +8,7 @@ from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
 from docx import Document as DocxDocument
 from pathlib import Path
+from docx.oxml.ns import qn
 
 logger = logging.getLogger(__name__)
 
@@ -30,17 +31,39 @@ def _load_markdown(path: str) -> str:
 
 
 
+def _paragraph_text(paragraph) -> str:
+    """Reconstruye el texto de un párrafo convirtiendo saltos de línea (<w:br>)
+    y tabuladores (<w:tab>) en separadores, que python-docx omite por defecto."""
+    parts = []
+    for node in paragraph._p.iter():
+        if node.tag == qn("w:t"):
+            parts.append(node.text or "")
+        elif node.tag == qn("w:tab"):
+            parts.append(" ")
+        elif node.tag in (qn("w:br"), qn("w:cr")):
+            parts.append("\n")
+    return "".join(parts)
+
+
 def _load_docx(path: str) -> str:
     doc = DocxDocument(path)
     parts = []
+
     for para in doc.paragraphs:
-        if para.text.strip():
-            parts.append(para.text)
+        text = _paragraph_text(para).strip()
+        if text:
+            parts.append(text)
+
     for table in doc.tables:
         for row in table.rows:
-            cells = [cell.text for cell in row.cells if cell.text.strip()]
+            cells = []
+            for cell in row.cells:
+                cell_text = " ".join(_paragraph_text(p) for p in cell.paragraphs).strip()
+                if cell_text:
+                    cells.append(cell_text)
             if cells:
                 parts.append(" | ".join(cells))
+
     return "\n".join(parts)
 
 

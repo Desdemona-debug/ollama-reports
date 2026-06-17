@@ -51,6 +51,11 @@ class ReportGenerator:
         validation = validate(result)
         if not validation.passed:
             logger.warning("Validación fallida: %s", validation.summary())
+            result = (
+                "> ⚠️ **ADVERTENCIA: este hallazgo no pasó la validación "
+                "automática de calidad. Revísalo manualmente antes de usarlo.**\n\n"
+                + result
+            )
 
         return result
 
