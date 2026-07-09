@@ -19,15 +19,14 @@ class ReportGenerator:
         self.retriever = Retriever() if use_rag else None
         self.client = ollama.Client(host=OLLAMA_HOST)
 
-    def generate(self, ideas: str, top_k: int = 5) -> str:
+    def generate(self, ideas: str, top_k: int = 5):
         if self.use_rag and self.retriever:
             fragments = self.retriever.search(ideas, top_k=top_k)
             rag_context = self.retriever.format_context(fragments)
             prompt = build_prompt(ideas, rag_context)
-            sources = [f["source"] for f in fragments]
         else:
             prompt = build_prompt_no_rag(ideas)
-            sources = []
+            fragments = []
 
         response = self.client.chat(
             model=OLLAMA_MODEL,
@@ -44,9 +43,22 @@ class ReportGenerator:
 
         result = response.message.content
 
-        if sources:
-            unique_sources = list(dict.fromkeys(sources))
-            logger.info("RAG sources consultadas: %s", ", ".join(unique_sources))
+        rag_info = [
+            {
+                "source": f["source"],
+                "chunk_index": f["chunk_index"],
+                "relevance_score": f["relevance_score"],
+            }
+            for f in fragments
+        ]
+        if rag_info:
+            logger.info(
+                "RAG fuentes: %s",
+                ", ".join(
+                    f"{r['source']}#{r['chunk_index']}={r['relevance_score']}"
+                    for r in rag_info
+                )
+            )
 
         validation = validate(result)
         if not validation.passed:
@@ -57,9 +69,9 @@ class ReportGenerator:
                 + result
             )
 
-        return result
+        return result, rag_info
 
-    def generate_from_file(self, filepath: str, top_k: int = 5) -> str:
+    def generate_from_file(self, filepath: str, top_k: int = 5):
         with open(filepath, "r", encoding="utf-8") as f:
             ideas = f.read()
         return self.generate(ideas, top_k=top_k)

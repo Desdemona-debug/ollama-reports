@@ -6,6 +6,8 @@ from pathlib import Path
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.prompt import Prompt, Confirm, IntPrompt
+from rich.table import Table
 
 from writer.report_generator import ReportGenerator
 
@@ -41,6 +43,9 @@ def parse_args():
     gen_parser.add_argument("--top-k", type=int, default=5, help="Fragmentos RAG a recuperar")
     gen_parser.add_argument("--output", type=str, help="Guardar resultado en archivo .md")
 
+    # Comando: interactive
+    subparsers.add_parser("interactive", help="Modo interactivo guiado (sin flags)")
+    
     return parser.parse_args()
 
 def cmd_ingest(args):
@@ -89,21 +94,95 @@ def cmd_generate(args):
         if not safe_path.exists():
             console.print(f"[red][!] Archivo no encontrado: {args.file}[/red]")
             sys.exit(1)
-        result = generator.generate_from_file(str(safe_path), top_k=args.top_k)
+        result, rag_info = generator.generate_from_file(str(safe_path), top_k=args.top_k)
     else:
-        result = generator.generate(args.ideas, top_k=args.top_k)
+        result, rag_info = generator.generate(args.ideas, top_k=args.top_k)
 
     console.print("\n")
     console.print(Markdown(result))
 
-    if args.output:
-        try:
-            safe_out = _validate_path(args.output, OUTPUT_DIR, "--output")
-        except ValueError as e:
-            console.print(f"[red][!] {e}[/red]")
-            sys.exit(1)
-        safe_out.write_text(result, encoding="utf-8")
-        console.print(f"\n[green][✓] Resultado guardado en: {safe_out}[/green]")
+    # Trazabilidad para la operadora (NO va al archivo --output)
+    if rag_info:
+        table = Table(
+            title="Trazabilidad — Fragmentos RAG consultados",
+            border_style="blue"
+        )
+        table.add_column("Fuente", style="cyan")
+        table.add_column("Chunk", justify="right")
+        table.add_column("Relevancia", justify="right", style="green")
+        for r in rag_info:
+            table.add_row(
+                r["source"],
+                str(r["chunk_index"]),
+                f"{r['relevance_score']:.3f}"
+            )
+        console.print(table)
+
+def cmd_interactive(args):
+    console.print(Panel("[bold cyan]Modo interactivo — Generador de hallazgos[/bold cyan]"))
+    OUTPUT_DIR = Path.cwd() / "output"
+    OUTPUT_DIR.mkdir(exist_ok=True)
+
+    # Configuración de la sesión (una sola vez)
+    use_rag = Confirm.ask("¿Usar memoria histórica (RAG) en esta sesión?", default=True)
+    top_k = 5
+    if use_rag:
+        top_k = IntPrompt.ask("¿Cuántos fragmentos recuperar (top-k)?", default=5)
+
+    console.print("[dim]Cargando generador...[/dim]")
+    generator = ReportGenerator(use_rag=use_rag)
+
+    while True:
+        console.print("\n[bold]Escribe las ideas del hallazgo[/bold] "
+                      "[dim](línea vacía para terminar)[/dim]:")
+        lineas = []
+        while True:
+            try:
+                linea = input("  > ")
+            except EOFError:
+                linea = ""
+            if linea.strip() == "":
+                break
+            lineas.append(linea)
+        ideas = "\n".join(lineas).strip()
+
+        if not ideas:
+            console.print("[yellow]No se ingresaron ideas.[/yellow]")
+        elif len(ideas) > MAX_INPUT_CHARS:
+            console.print("[red][!] Las ideas superan el límite permitido.[/red]")
+        else:
+            console.print(Panel(
+                f"[cyan]Generando[/cyan] | RAG: {'ON' if use_rag else 'OFF'} | top-k: {top_k}"
+            ))
+            try:
+                result, rag_info = generator.generate(ideas, top_k=top_k)
+                console.print("\n")
+                console.print(Markdown(result))
+
+                if rag_info:
+                    table = Table(title="Trazabilidad — Fragmentos RAG", border_style="blue")
+                    table.add_column("Fuente", style="cyan")
+                    table.add_column("Chunk", justify="right")
+                    table.add_column("Relevancia", justify="right", style="green")
+                    for r in rag_info:
+                        table.add_row(
+                            r["source"], str(r["chunk_index"]),
+                            f"{r['relevance_score']:.3f}"
+                        )
+                    console.print(table)
+
+                if Confirm.ask("¿Guardar este hallazgo?", default=False):
+                    nombre = Prompt.ask("Nombre del archivo", default="hallazgo.md")
+                    safe_out = OUTPUT_DIR / Path(nombre).name   # solo dentro de output/
+                    safe_out.write_text(result, encoding="utf-8")
+                    console.print(f"[green][✓] Guardado en: {safe_out}[/green]")
+
+            except ValueError as e:
+                console.print(f"[red][!] {e}[/red]")
+
+        if not Confirm.ask("\n¿Generar otro hallazgo?", default=True):
+            console.print("[dim]Sesión terminada.[/dim]")
+            break
 
 def main():
     logging.basicConfig(
@@ -118,6 +197,8 @@ def main():
         cmd_ingest(args)
     elif args.command == "generate":
         cmd_generate(args)
+    elif args.command == "interactive":
+        cmd_interactive(args)
 
 if __name__ == "__main__":
     main()

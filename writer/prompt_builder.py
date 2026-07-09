@@ -69,9 +69,9 @@ FINDING_TEMPLATE = """Genera un hallazgo formal con la siguiente estructura exac
 ## 1. Título del hallazgo
 ## 2. Descripción técnica
 ## 3. Impacto
-## 4. Evidencia sugerida
+## 4. Evidencia sugerida (describe en forma de SUGERENCIAS qué debe mostrarse como evidencia de ESTE hallazgo, basándote ÚNICAMENTE en las ideas del operador. NO uses ejemplos de otros tipos de hallazgo ni inventes escenarios ajenos. NO escribas leyendas de imágenes como "Ilustración N." ni referencias a figuras)
 ## 5. Recomendación
-## 6. Severidad (Crítica / Alta / Media / Baja / Informativa) con justificación breve
+## 6. Justificación de severidad (explica el razonamiento del riesgo y su impacto, SIN asignar una etiqueta de nivel como Crítica/Alta/Media/Baja/Informativa)
 ## 7. Versión ejecutiva (2-3 oraciones para audiencia no técnica)"""
 
 

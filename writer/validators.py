@@ -4,13 +4,13 @@ from dataclasses import dataclass, field
 from typing import List, Tuple
 
 REQUIRED_SECTIONS = [
-    "## 1. Título del hallazgo",
-    "## 2. Descripción técnica",
-    "## 3. Impacto",
-    "## 4. Evidencia sugerida",
-    "## 5. Recomendación",
-    "## 6. Severidad",
-    "## 7. Versión ejecutiva",
+    "## 1.",
+    "## 2.",
+    "## 3.",
+    "## 4.",
+    "## 5.",
+    "## 6.",
+    "## 7.",
 ]
 
 VALID_SEVERITIES = {"crítica", "alta", "media", "baja", "informativa"}
@@ -118,7 +118,6 @@ def validate(finding_text: str) -> ValidationResult:
 
     checks = [
         _check_sections,
-        _check_severity,
         _check_pending_fields,
         _check_length,
         _check_forbidden,

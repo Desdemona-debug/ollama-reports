@@ -18,7 +18,8 @@ from docx.text.paragraph import Paragraph
 # Sección que SÍ queremos extraer
 START_SECTIONS = (
     "vulnerabilidades encontradas",
-    "pruebas informativas"
+    "pruebas informativas",
+    "hallazgos encontrados"
 )
 
 # Secciones que cortan la captura (ruido que no aporta al estilo)
@@ -51,7 +52,15 @@ def _load_pdf(path: str) -> str:
 def _load_markdown(path: str) -> str:
     return Path(path).read_text(encoding="utf-8")
 
+CAPTION_PREFIX = re.compile(
+    r"^\s*(ilustraci[oó]n|figura|imagen|fig\.?)\s*\d+\s*[.:\-]?\s*",
+    re.IGNORECASE
+)
 
+def _strip_caption(text: str) -> str:
+    """Quita prefijos de leyenda tipo 'Ilustración 5.' manteniendo la
+    descripción que les sigue. Evita que el RAG aprenda ese formato."""
+    return CAPTION_PREFIX.sub("", text).strip()
 
 def _paragraph_text(paragraph) -> str:
     """Texto de un párrafo, convirtiendo <w:br>/<w:tab> en separadores.
@@ -103,8 +112,9 @@ def _load_docx(path: str) -> str:
             capture = False
             continue
         if capture:
-            filtered.append(text)
-
+            clean = _strip_caption(text)
+            if clean:
+                filtered.append(clean)
     if filtered:
         return "\n".join(filtered)
 
